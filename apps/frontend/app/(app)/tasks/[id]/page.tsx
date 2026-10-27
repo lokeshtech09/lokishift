@@ -21,6 +21,7 @@ import { ScorePill, StatusBadge } from '@/components/status-badge';
 import { Button, Card, ErrorBanner, Spinner } from '@/components/ui';
 import { api, formatDate, mailVendorHref, type Ranking, type Task, timeAgo } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { DownloadLink } from '@/components/download-link';
 
 export default function TaskPage() {
   const { id } = useParams<{ id: string }>();
@@ -142,13 +143,14 @@ export default function TaskPage() {
         <div className="flex flex-wrap gap-2">
           {task.status === 'finished' && (
             <>
-              <a
+              <DownloadLink
                 href={api.taskDownloadUrl(task.task_id)}
+                filename={task.tailored_filename || 'Tailored resume.docx'}
                 className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
               >
                 <Download className="h-4 w-4" />
                 Download .docx
-              </a>
+              </DownloadLink>
               {mail ? (
                 <a
                   href={mail}

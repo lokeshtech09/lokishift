@@ -7,6 +7,7 @@ import { useActivity } from '@/components/activity-provider';
 import { ScorePill, StatusBadge } from '@/components/status-badge';
 import { api, formatDate, mailVendorHref, type Task } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * Task list: a table on wide screens, stacked cards on phones. Both views
@@ -111,10 +112,14 @@ function Scores({ task }: { task: Task }) {
 function MainAction({ task, busy, tailor }: { task: Task; busy: boolean; tailor: () => void }) {
   if (task.status === 'finished' && task.has_tailored_docx) {
     return (
-      <a href={api.taskDownloadUrl(task.task_id)} className={pillButton}>
+      <DownloadLink
+        href={api.taskDownloadUrl(task.task_id)}
+        filename={task.tailored_filename || 'Tailored resume.docx'}
+        className={pillButton}
+      >
         <Download className="h-4 w-4" />
         Download
-      </a>
+      </DownloadLink>
     );
   }
   if (task.status === 'matched') {

@@ -23,6 +23,7 @@ import {
   type ResumeFile,
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { DownloadLink } from '@/components/download-link';
 
 const EMPTY_ROLE: ExperienceItem = {
   title: '',
@@ -581,13 +582,14 @@ function ResumeRow({
           ))}
         </select>
       )}
-      <a
+      <DownloadLink
         href={api.resumeDownloadUrl(resume.profile_id, resume.resume_id)}
+        filename={resume.filename}
         className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
         title="Download"
       >
         <Download className="h-4 w-4" />
-      </a>
+      </DownloadLink>
       <button
         onClick={() =>
           confirm(`Delete “${resume.name}”?`) &&
