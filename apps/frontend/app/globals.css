@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+
+@source "../{app,components,lib}/**/*.{ts,tsx}";
+
+/*
+ * LokiShift theme — "Underground".
+ *
+ * Inspired by Toyota's Underground (1L7) metallic grey and the Corolla's red
+ * accents. Light and quiet:
+ *  - Silver-white surfaces carry the screen; no dark panels.
+ *  - brand (Underground grey) = buttons, active items, headings.
+ *  - accent (taillight red) = tiny touches only: logo, active marker,
+ *    "needs you" dots, the "added from the JD" note.
+ *  - Failures use a softer rose so they never look like the accent.
+ */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans Variable', 'Inter Variable', ui-sans-serif, sans-serif;
+
+  /* Underground grey: a medium metallic grey with a faint earthy undertone.
+     600 on white = 6.4:1, comfortably readable for buttons and text. */
+  --color-brand-50: #f4f5f3;
+  --color-brand-100: #e8e9e6;
+  --color-brand-200: #d3d5d0;
+  --color-brand-300: #b3b6af;
+  --color-brand-400: #8c9088;
+  --color-brand-500: #6c7068;
+  --color-brand-600: #585c55;
+  --color-brand-700: #484b45;
+  --color-brand-800: #3b3d39;
+  --color-brand-900: #2f312d;
+
+  /* Taillight red: used sparingly so it always means "look here". */
+  --color-accent-50: #fdf2f2;
+  --color-accent-100: #fbe2e3;
+  --color-accent-200: #f6c6c8;
+  --color-accent-300: #ee9ca0;
+  --color-accent-400: #e2636a;
+  --color-accent-500: #d23a43;
+  --color-accent-600: #b82731;
+  --color-accent-700: #9a2029;
+  --color-accent-800: #7e1d24;
+  --color-accent-900: #661b21;
+
+  /* Cool silver neutrals, like the car's trim. */
+  --color-gray-50: #f8f9f9;
+  --color-gray-100: #f0f2f2;
+  --color-gray-200: #e3e6e6;
+  --color-gray-300: #cfd3d4;
+  --color-gray-400: #9fa5a7;
+  --color-gray-500: #737a7c;
+  --color-gray-600: #575e60;
+  --color-gray-700: #42484a;
+  --color-gray-800: #2d3234;
+  --color-gray-900: #1e2224;
+
+  --color-canvas: #f3f4f4;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-gray-900);
+}
+
+::selection {
+  background: var(--color-brand-100);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 180ms ease-out;
+}
+
+/*
+ * Phones: iOS Safari zooms the page into any form field whose text is under
+ * 16px. Keep every field at 16px on small screens so tapping never zooms.
+ */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Swipeable tab rows: keep them scrollable, hide the scrollbar line. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

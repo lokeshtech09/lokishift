@@ -1,0 +1,27 @@
+services:
+  lokishift:
+    build: .
+    container_name: lokishift
+    ports:
+      # Published on this computer only: the app can spend your saved AI key.
+      - "127.0.0.1:${PORT:-3000}:3000"
+    volumes:
+      - resume-data:/app/backend/data
+    environment:
+      # domain in reverse proxy
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
+      # Logging configuration: DEBUG, INFO, WARNING, ERROR
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      #- LOG_LEVEL_FILE=${LOG_LEVEL_FILE:-}
+      # Debug level for LiteLLM: DEBUG, INFO, WARNING, ERROR
+      - LOG_LLM=${LOG_LLM:-WARNING}
+      #- LOG_LLM_FILE=${LOG_LLM_FILE:-}
+      # The AI provider, model and API key are set in the app (Settings page)
+      # and stored encrypted in the resume-data volume.
+      # CORS origins (JSON array format). FRONTEND_BASE_URL is auto-included.
+      #- CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+    restart: unless-stopped
+
+volumes:
+  resume-data:
+    driver: local

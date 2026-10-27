@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# LokiShift pre-push gate. Blocks the push if any check fails:
+#   1. backend tests      (uv run pytest; the LLM is stubbed, no network)
+#   2. frontend typecheck (tsc --noEmit)
+#   3. frontend lint      (eslint)
+#
+# Activate once per clone:  git config core.hooksPath .githooks
+# Bypass on purpose:        git push --no-verify
+
+set -u
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FAILED=0
+
+echo "▶ backend  : pytest"
+( cd "$REPO_ROOT/apps/backend" && uv run pytest -q -p no:cacheprovider ) || FAILED=1
+
+if command -v npm >/dev/null 2>&1 && [ -d "$REPO_ROOT/apps/frontend/node_modules" ]; then
+  echo "▶ frontend : typecheck"
+  ( cd "$REPO_ROOT/apps/frontend" && npm run --silent typecheck ) || FAILED=1
+  echo "▶ frontend : lint"
+  ( cd "$REPO_ROOT/apps/frontend" && npm run --silent lint ) || FAILED=1
+else
+  echo "▷ frontend : skipped (run npm install in apps/frontend first)"
+fi
+
+if [ "$FAILED" -ne 0 ]; then
+  echo "✗ pre-push checks failed; push blocked (use --no-verify to skip)."
+  exit 1
+fi
+echo "✓ all pre-push checks passed"
