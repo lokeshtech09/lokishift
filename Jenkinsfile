@@ -15,8 +15,8 @@ pipeline {
     environment {
         // ── Change these four for your AWS account ─────────────────────────────
         AWS_REGION   = 'us-east-2'   // your AWS project's Region
-        AWS_ACCOUNT  = '123456789012'
-        APP_HOST     = '10.0.1.20'            // the EC2 instance's PRIVATE IP (same server as Jenkins)
+        AWS_ACCOUNT  = '319793009477'
+        APP_HOST     = '18.216.54.193'            // the EC2 instance's PRIVATE IP (same server as Jenkins)
         APP_USER     = 'ubuntu'
         // ───────────────────────────────────────────────────────────────────────
         ECR_REPO     = 'lokishift'
