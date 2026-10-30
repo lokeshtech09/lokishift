@@ -65,7 +65,7 @@ pipeline {
                     }
                     steps {
                         dir('apps/backend') {
-                            sh 'uv sync --extra dev --frozen'
+                            sh 'uv sync --extra dev'
                             // The LLM is stubbed: no API key and no network calls in tests.
                             sh '''
                                 uv run --with pytest-cov pytest -q -p no:cacheprovider \
