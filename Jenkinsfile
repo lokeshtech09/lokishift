@@ -130,6 +130,9 @@ pipeline {
         stage('Push to Amazon ECR') {
             steps {
                 // Uses the Jenkins EC2 instance's IAM role: no AWS keys stored in Jenkins.
+                // If ECR refuses the push, mark this stage UNSTABLE (yellow) and carry on:
+                // the app server is this same machine, so the deploy can use the local image.
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                 sh '''
                     aws ecr describe-repositories --repository-names "$ECR_REPO" --region "$AWS_REGION" >/dev/null 2>&1 \
                       || aws ecr create-repository --repository-name "$ECR_REPO" --region "$AWS_REGION"
@@ -138,6 +141,7 @@ pipeline {
                     docker push "$IMAGE:$IMAGE_TAG"
                     docker push "$IMAGE:latest"
                 '''
+                }
             }
         }
 

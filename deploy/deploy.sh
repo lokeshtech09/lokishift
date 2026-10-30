@@ -10,11 +10,14 @@ IMAGE="$2"
 REGION="$3"
 NAME=lokishift
 
-echo "▶ Logging in to ECR"
-aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
-
-echo "▶ Pulling $IMAGE"
-docker pull "$IMAGE"
+if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "▶ $IMAGE is already on this server (built by Jenkins here): no pull needed"
+else
+    echo "▶ Logging in to ECR"
+    aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+    echo "▶ Pulling $IMAGE"
+    docker pull "$IMAGE"
+fi
 
 PREVIOUS="$(docker inspect --format '{{.Config.Image}}' "$NAME" 2>/dev/null || true)"
 
