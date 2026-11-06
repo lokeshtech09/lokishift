@@ -85,7 +85,7 @@ def test_task_matches_then_tailors_in_background(client, stub_llm):
     import io, docx
     texts = [p.text for p in docx.Document(io.BytesIO(download.content)).paragraphs]
     assert "Email: jane@example.com | Phone: 512-555-0100" in texts
-    assert "Built event-driven microservices with Kafka on Kubernetes." in texts
+    assert "Ran microservices on Kubernetes." in texts
     assert any(t.startswith("Senior Python developer with 8 years") for t in texts)
 
 
@@ -93,7 +93,7 @@ def test_auto_tailor(client, stub_llm):
     pid = _profile_with_resumes(client)
     tid = client.post("/api/v1/tasks", json=_task(pid, auto_tailor=True)).json()["task_id"]
     task = _wait(client, tid, ("finished", "failed"))
-    assert task["status"] == "finished" and stub_llm["tailor"] == 1
+    assert task["status"] == "finished" and stub_llm["tailor"] >= 1  # first pass + any ATS repair passes
 
 
 def test_failure_is_recorded_and_retry_works(client, stub_llm):

@@ -276,13 +276,15 @@ def apply_edits(
     content: bytes,
     edits: dict[int, str],
     insertions: list[tuple[int, str]] | None = None,
+    deletions: list[int] | None = None,
 ) -> bytes:
     """Write ``{paragraph_index: new_text}`` into the DOCX and return new bytes.
 
     ``insertions`` are ``(after_index, text)`` pairs: a new paragraph formatted
     like paragraph ``after_index`` is added right after it (several after the
-    same paragraph keep their order). Indices always refer to the original
-    document, before any insertion.
+    same paragraph keep their order). ``deletions`` are paragraphs removed
+    from the document (a swap: one weak bullet out, one new bullet in). Indices
+    always refer to the original document, before any insertion or deletion.
 
     Only editable paragraphs may change or anchor an insertion; a locked or
     unknown index is an error rather than a silent skip, so callers cannot
@@ -296,6 +298,16 @@ def apply_edits(
         if not _is_editable(elements[after]):
             raise DocxEditError(f"Paragraph {after} is locked and cannot anchor a new line.")
         _clean_text(after, text)
+    removed = set(deletions or [])
+    for index in removed:
+        if index < 0 or index >= len(elements):
+            raise DocxEditError(f"Paragraph {index} does not exist.")
+        if not _is_editable(elements[index]):
+            raise DocxEditError(f"Paragraph {index} is locked and cannot be removed.")
+        if index in edits:
+            raise DocxEditError(f"Paragraph {index} cannot be both removed and changed.")
+    # An insertion may anchor on a paragraph that is then removed: the new
+    # paragraph takes its place (inserted first, the anchor deleted last).
     # Clone anchors before any edit, so a new bullet copies the neighbour's
     # formatting, not text an edit is about to put there.
     originals = {after: copy.deepcopy(elements[after]) for after, _ in insertions or []}
@@ -313,6 +325,10 @@ def apply_edits(
         paragraph = _new_paragraph_like(originals[after], _clean_text(after, text))
         last_inserted.get(after, elements[after]).addnext(paragraph)
         last_inserted[after] = paragraph
+
+    for index in removed:
+        element = elements[index]
+        element.getparent().remove(element)
 
     output = io.BytesIO()
     document.save(output)

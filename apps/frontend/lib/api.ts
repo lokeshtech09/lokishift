@@ -73,11 +73,26 @@ export interface TailorEdit {
   added_from_jd: string[];
 }
 
+export interface TailorRequestStatus {
+  request: number;
+  action?: 'add' | 'rewrite' | 'remove';
+  /** What the candidate asked for: a number or "all". */
+  asked?: number | 'all';
+  skill: string;
+  role: number;
+  role_name: string;
+  requested: number;
+  done: number;
+}
+
 export interface TailorAddition {
   after: number;
   anchor_text: string;
   text: string;
   keywords: string[];
+  /** The weak bullet this new one replaced (swaps keep the length the same). */
+  removed_index?: number;
+  removed_text?: string;
 }
 
 export interface TailoringReport {
@@ -88,6 +103,20 @@ export interface TailoringReport {
   keyword_score_after: number;
   matched_after: string[];
   missing_after: string[];
+  ats_score?: number;
+  ats_target?: number;
+  ats_target_met?: boolean;
+  key_skills?: string[];
+  key_skills_missing_in_recent_roles?: string[];
+  recent_roles?: string[];
+  length_before?: number;
+  length_after?: number;
+  paragraphs_before?: number;
+  paragraphs_after?: number;
+  repair_passes?: number;
+  /** Add-bullet requests read from the AI instructions, one row per client. */
+  requests?: TailorRequestStatus[];
+  removed?: { index: number; text: string; role: number; role_name: string }[];
   resume_id: string;
   resume_name: string;
   score_before: number | null;

@@ -19,7 +19,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { useActivity } from '@/components/activity-provider';
 import { ScorePill, StatusBadge } from '@/components/status-badge';
 import { Button, Card, ErrorBanner, Spinner } from '@/components/ui';
-import { api, formatDate, mailVendorHref, type Ranking, type Task, timeAgo } from '@/lib/api';
+import {
+  api,
+  formatDate,
+  mailVendorHref,
+  type Ranking,
+  type Task,
+  type TailorRequestStatus,
+  timeAgo,
+} from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { DownloadLink } from '@/components/download-link';
 
@@ -421,7 +429,11 @@ function TailoringResult({ task }: { task: Task }) {
   const report = task.tailoring!;
   const [showAll, setShowAll] = useState(false);
   const fromJd = [
-    ...report.additions.map((a) => ({ kind: 'New bullet', text: a.text, detail: a.keywords })),
+    ...report.additions.map((a) => ({
+      kind: a.removed_text ? 'Swapped in' : 'New bullet',
+      text: a.text,
+      detail: a.keywords,
+    })),
     ...report.edits
       .filter((e) => e.added_from_jd.length)
       .map((e) => ({ kind: 'Rewritten', text: e.new_text, detail: e.added_from_jd })),
@@ -439,12 +451,68 @@ function TailoringResult({ task }: { task: Task }) {
         </div>
         <div className="h-12 w-px bg-gray-200" />
         <Stat label="Lines rewritten" value={report.edits.length} />
-        <Stat label="Bullets added" value={report.additions.length} />
+        <Stat label="Bullets swapped" value={report.additions.length} />
         <Stat
-          label="Keyword coverage"
-          value={`${report.keyword_score_before}% → ${report.keyword_score_after}%`}
+          label={
+            report.ats_target ? `ATS score (target ${report.ats_target}%)` : 'Keyword coverage'
+          }
+          value={
+            <span className={cn(report.ats_target_met === false && 'text-accent-700')}>
+              {report.keyword_score_before}% → {report.keyword_score_after}%
+              {report.ats_target_met === true && ' ✓'}
+            </span>
+          }
         />
+        {report.length_before != null && report.length_after != null && (
+          <Stat
+            label="Length"
+            value={
+              report.length_after <= report.length_before
+                ? 'Same or shorter'
+                : `+${report.length_after - report.length_before} chars`
+            }
+          />
+        )}
       </div>
+      {report.ats_target_met === false && (
+        <p className="mt-4 rounded-lg bg-accent-50 px-4 py-3 text-sm text-accent-900">
+          The ATS score reached {report.keyword_score_after}%, below the {report.ats_target}%
+          target, without making the resume longer. Still missing:{' '}
+          {report.missing_after.slice(0, 10).join(', ')}. Retry tailoring, or add these to your
+          resume where they are true.
+        </p>
+      )}
+      {(report.requests?.length ?? 0) > 0 && (
+        <div className="mt-4 rounded-lg border border-gray-200 px-4 py-3 text-sm">
+          <p className="font-medium text-gray-900">Your requests</p>
+          <ul className="mt-1.5 space-y-1">
+            {report.requests!.map((r) => (
+              <li key={`${r.request}-${r.role}`} className="text-gray-700">
+                {r.done >= r.requested ? '✓' : '•'} {requestLabel(r)} in{' '}
+                {r.role_name.split(' · ')[0]}
+                {r.done < r.requested && (
+                  <span className="text-accent-700">
+                    {' '}
+                    — {r.done} of {r.requested} done
+                  </span>
+                )}
+                {typeof r.asked === 'number' && r.asked > r.requested && (
+                  <span className="text-gray-500">
+                    {' '}
+                    (you asked for {r.asked}; this client has {r.requested} bullets)
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {(report.key_skills_missing_in_recent_roles?.length ?? 0) > 0 && (
+        <p className="mt-3 text-sm text-gray-700">
+          <span className="font-medium">Key skills not in your 3 most recent clients:</span>{' '}
+          {report.key_skills_missing_in_recent_roles!.join(', ')}
+        </p>
+      )}
       <p className="mt-5 text-gray-700">{report.summary}</p>
       <p className="mt-1 text-xs text-gray-500">
         Based on “{report.resume_name}” · saved as {task.tailored_filename}
@@ -483,7 +551,8 @@ function TailoringResult({ task }: { task: Task }) {
         className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-brand-800 underline-offset-4 hover:text-accent-600 hover:underline"
       >
         <ChevronDown className={cn('h-4 w-4 transition-transform', !showAll && '-rotate-90')} />
-        {showAll ? 'Hide' : 'Show'} all {report.edits.length + report.additions.length} changes
+        {showAll ? 'Hide' : 'Show'} all{' '}
+        {report.edits.length + report.additions.length + (report.removed?.length ?? 0)} changes
       </button>
       {showAll && (
         <div className="mt-4 space-y-3">
@@ -493,15 +562,25 @@ function TailoringResult({ task }: { task: Task }) {
               <p className="mt-2 text-gray-900">{e.new_text}</p>
             </div>
           ))}
+          {(report.removed ?? []).map((r) => (
+            <div key={`r${r.index}`} className="rounded-lg border border-gray-200 p-4 text-sm">
+              <p className="text-xs text-gray-500">Removed, as you asked</p>
+              <p className="mt-1.5 text-gray-500 line-through decoration-gray-300">{r.text}</p>
+            </div>
+          ))}
           {report.additions.map((a, i) => (
             <div
               key={`a${i}`}
               className="rounded-lg border border-brand-200 bg-brand-50/50 p-4 text-sm"
             >
-              <p className="text-xs text-gray-500">
-                New bullet after: “{a.anchor_text.slice(0, 90)}
-                {a.anchor_text.length > 90 ? '…' : ''}”
-              </p>
+              {a.removed_text ? (
+                <p className="text-gray-500 line-through decoration-gray-300">{a.removed_text}</p>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  New bullet after: “{a.anchor_text.slice(0, 90)}
+                  {a.anchor_text.length > 90 ? '…' : ''}”
+                </p>
+              )}
               <p className="mt-1.5 text-gray-900">{a.text}</p>
             </div>
           ))}
@@ -509,6 +588,14 @@ function TailoringResult({ task }: { task: Task }) {
       )}
     </Card>
   );
+}
+
+function requestLabel(r: TailorRequestStatus): string {
+  const n = r.requested;
+  const points = `${n} point${n === 1 ? '' : 's'}`;
+  if (r.action === 'rewrite') return `${points} rewritten to mention ${r.skill}`;
+  if (r.action === 'remove') return `${points}${r.skill ? ` about ${r.skill}` : ''} removed`;
+  return `${points} on ${r.skill} added`;
 }
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {

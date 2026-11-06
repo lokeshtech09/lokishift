@@ -69,10 +69,22 @@ def stub_llm(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         calls["tailor"] += 1
         if calls["fail_tailor"]:
             raise calls["fail_tailor"]
-        lines = [l for l in prompt.splitlines() if l.startswith("[") and "LOCKED" not in l]
+        lines = [l for l in prompt.splitlines() if l[:2].startswith("[") and l[1:2].isdigit() and "LOCKED" not in l]
         indexes = {int(l[1:l.index("]")]): l for l in lines}
+        if "STILL MISSING" in prompt:  # a repair pass: work missing terms into the skills line
+            calls["repair"] = calls.get("repair", 0) + 1
+            missing_line = prompt.split("STILL MISSING", 1)[1].splitlines()[1]
+            terms = [t.split(" (")[0].strip() for t in missing_line.split(",") if t.strip() and t.strip() != "none"]
+            skills = next(i for i, l in indexes.items() if "Skills:" in l)
+            line = indexes[skills]
+            cap = int(line.split("max ", 1)[1].split(")", 1)[0])
+            text = line.split(") ", 1)[1]
+            for term in terms:
+                if len(text + ", " + term) <= cap:
+                    text += ", " + term
+            return {"edits": [{"index": skills, "new_text": text, "keywords": terms}]}, "stub"
         summary = next(i for i, l in indexes.items() if "Backend engineer" in l)
-        bullet = next(i for i, l in indexes.items() if "(List Bullet)" in l)
+        bullets = [i for i, l in indexes.items() if "(List Bullet" in l]
         phone = 1  # protected: must be ignored even if the model returns it
         return {
             "summary": "stub",
@@ -80,8 +92,8 @@ def stub_llm(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
                 {"index": summary, "new_text": "Senior Python developer with 8 years building FastAPI and Django APIs on AWS.", "keywords": ["FastAPI"]},
                 {"index": phone, "new_text": "Phone: 000", "keywords": []},
             ],
-            "additions": [
-                {"after": bullet, "text": "Built event-driven microservices with Kafka on Kubernetes.", "keywords": ["Kafka"]},
+            "swaps": [
+                {"remove": bullets[-1], "after": bullets[0], "text": "Ran microservices on Kubernetes.", "keywords": ["Kubernetes"]},
             ],
         }, "stub"
 
